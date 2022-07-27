@@ -1,29 +1,46 @@
 package com.piedpiper.authdemo.configuration;
 
 import org.springframework.context.annotation.Bean;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.SecurityFilterChain;
 
-@EnableWebSecurity
-public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
+import java.util.function.Function;
 
-    private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+import static org.springframework.security.config.Customizer.withDefaults;
 
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.inMemoryAuthentication()
-                .passwordEncoder(passwordEncoder)
-                .withUser("jimmy.neutron")
-                .password(passwordEncoder().encode("secret"))
-                .roles("USER");
+@Configuration
+public class SecurityConfiguration {
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return passwordEncoder;
+    protected InMemoryUserDetailsManager userDetailsService() {
+        Function<String, String> encoder = (password) -> passwordEncoder().encode(password);
+        UserDetails user = User
+                .withUsername("jimmy.neutron")
+                .passwordEncoder(encoder)
+                .password("secret")
+                .roles("USER")
+                .build();
+        System.out.println(user.getPassword()); // will show on app start; should be result of bcrypt hashing
+        return new InMemoryUserDetailsManager(user);
     }
 
+    @Bean
+    protected SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests((authorize) -> authorize
+            .anyRequest().authenticated()
+        )
+        .httpBasic(withDefaults());
+        return http.build();
+    }
 }
