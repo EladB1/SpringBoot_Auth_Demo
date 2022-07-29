@@ -16,7 +16,7 @@ public class HomeController {
 
     @GetMapping("/")
     public String getCurrentUser(@AuthenticationPrincipal User user, Model model) {
-        String username = user.getUsername();
+        String username = "TEst"; //user.getUsername();
 
         model.addAttribute("username", username);
         model.addAttribute("lastAccess", usersLastAccess.get(username));
