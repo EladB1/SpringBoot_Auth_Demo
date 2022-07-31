@@ -25,6 +25,6 @@ public class UserService implements UserDetailsService {
             if (appUser.getUsername().equals(username))
                 return new User(appUser.getUsername(), appUser.getPassword(), new ArrayList<>());
         }
-        throw new UsernameNotFoundException("Could not find user with username " + username);
+        return new User(null, null, null); //throw new UsernameNotFoundException("Could not find user with username " + username);
     }
 }

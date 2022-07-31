@@ -1,15 +1,11 @@
 package com.piedpiper.authdemo.configuration;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
-import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -29,30 +25,45 @@ public class JWTFilter extends OncePerRequestFilter {
         return user;
     }
 
+    private void handleError(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        response.getOutputStream().print(message);
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
         String header = request.getHeader("Authorization");
-
-        if (!header.isEmpty() && header.startsWith("Bearer ")) {
+        if (header != null && !header.isEmpty() && header.startsWith("Bearer ")) {
             String jwt = header.split(" ")[1].trim();
-            if (jwt.isEmpty()) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid JWT Token in Bearer Header");
+            if ( jwt == null || jwt.isEmpty()) {
+                handleError(response, "Invalid JWT in Bearer Header");
+                return;
             }
             else {
                 try {
                     String username = jwtUtil.validateTokenAndGetSubject(jwt);
+                    if (username == null || username.isEmpty()) {
+                        handleError(response, "Token maybe misconfigured; could not find username");
+                        return;
+                    }
                     UserDetails userDetails = fakeGetUser(username);
 
                     UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(username, userDetails.getPassword(), userDetails.getAuthorities());
-                    System.out.println(username);
                     if (SecurityContextHolder.getContext().getAuthentication() == null) {
                         SecurityContextHolder.getContext().setAuthentication(token);
                     }
                 }
                 catch(JWTVerificationException err) {
-                    System.out.println(err.getMessage());
-                    response.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Invalid JWT supplied");
+                    handleError(response, err.getMessage());
+                    return;
                 }
+            }
+        }
+        else {
+            if (!request.getRequestURI().equals("/token")) {
+                // endpoint "/token" is where you get a JWT so none needed; for some reason this filter applies there too
+                handleError(response, "Missing or misconfigured Bearer token");
+                return;
             }
         }
         chain.doFilter(request, response);

@@ -32,16 +32,17 @@ public class AuthController {
     public ResponseEntity<String> token(@RequestBody AppUser appUser) {
         try {
             UserDetails user = userDetailsService.loadUserByUsername(appUser.getUsername());
-            if (user == null)
-                throw new UsernameNotFoundException("Invalid username or password");
-            System.out.println(user.getPassword());
             if (!passwordEncoder.matches(appUser.getPassword(), user.getPassword())) {
                 throw new BadCredentialsException("Invalid username or password");
             }
             String token = jwtUtil.generateToken(appUser.getUsername());
             return ResponseEntity.ok().body(token);
         }
+        catch(UsernameNotFoundException err) {
+            return new ResponseEntity<>("Invalid username or password", HttpStatus.BAD_REQUEST);
+        }
         catch (AuthenticationException err) {
+            //System.out.println(err.getClass() + ": " + err.getMessage());
             return new ResponseEntity<>(err.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
