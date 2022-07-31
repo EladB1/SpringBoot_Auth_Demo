@@ -1,6 +1,9 @@
 package com.piedpiper.authdemo.configuration;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.piedpiper.authdemo.JWTResponseDAO;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,7 +30,11 @@ public class JWTFilter extends OncePerRequestFilter {
 
     private void handleError(HttpServletResponse response, String message) throws IOException {
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        response.getOutputStream().print(message);
+        JWTResponseDAO json = new JWTResponseDAO(message, null);
+        ObjectMapper mapper = new ObjectMapper();
+        String output = mapper.writeValueAsString(json);
+        response.setContentType("application/json");
+        response.getOutputStream().print(output);
     }
 
     @Override

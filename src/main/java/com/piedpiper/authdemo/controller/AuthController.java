@@ -1,5 +1,6 @@
 package com.piedpiper.authdemo.controller;
 
+import com.piedpiper.authdemo.JWTResponseDAO;
 import com.piedpiper.authdemo.configuration.JWTUtil;
 import com.piedpiper.authdemo.user.AppUser;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,21 +30,24 @@ public class AuthController {
 
 
     @PostMapping("/token")
-    public ResponseEntity<String> token(@RequestBody AppUser appUser) {
+    public ResponseEntity<JWTResponseDAO> token(@RequestBody AppUser appUser) {
         try {
             UserDetails user = userDetailsService.loadUserByUsername(appUser.getUsername());
             if (!passwordEncoder.matches(appUser.getPassword(), user.getPassword())) {
                 throw new BadCredentialsException("Invalid username or password");
             }
             String token = jwtUtil.generateToken(appUser.getUsername());
-            return ResponseEntity.ok().body(token);
+            JWTResponseDAO response = new JWTResponseDAO(null, token);
+            return ResponseEntity.ok().body(response);
         }
         catch(UsernameNotFoundException err) {
-            return new ResponseEntity<>("Invalid username or password", HttpStatus.BAD_REQUEST);
+            JWTResponseDAO response = new JWTResponseDAO("Invalid username or password", null);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
         catch (AuthenticationException err) {
             //System.out.println(err.getClass() + ": " + err.getMessage());
-            return new ResponseEntity<>(err.getMessage(), HttpStatus.BAD_REQUEST);
+            JWTResponseDAO response = new JWTResponseDAO(err.getMessage(), null);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
     }
 }
