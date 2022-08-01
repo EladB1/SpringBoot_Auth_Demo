@@ -1,6 +1,14 @@
 package com.piedpiper.authdemo.user;
 
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+@Entity
+@Table(name = "users")
 public class AppUser {
+
+    @Id
     private String username;
 
     private String password;

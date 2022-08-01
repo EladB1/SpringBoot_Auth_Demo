@@ -2,7 +2,8 @@ package com.piedpiper.authdemo.configuration;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.piedpiper.authdemo.JWTResponseDAO;
+import com.piedpiper.authdemo.JWTBlockListService;
+import com.piedpiper.authdemo.JWTResponseDTO;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,6 +24,9 @@ public class JWTFilter extends OncePerRequestFilter {
     @Autowired
     private JWTUtil jwtUtil;
 
+    @Autowired
+    private JWTBlockListService blockListService;
+
     public UserDetails fakeGetUser(String username) {
         UserDetails user = User.withUsername(username).password("secret").authorities("ADMIN").build();
         return user;
@@ -30,7 +34,7 @@ public class JWTFilter extends OncePerRequestFilter {
 
     private void handleError(HttpServletResponse response, String message) throws IOException {
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        JWTResponseDAO json = new JWTResponseDAO(message, null);
+        JWTResponseDTO json = new JWTResponseDTO(message, null);
         ObjectMapper mapper = new ObjectMapper();
         String output = mapper.writeValueAsString(json);
         response.setContentType("application/json");
@@ -53,6 +57,10 @@ public class JWTFilter extends OncePerRequestFilter {
                         handleError(response, "Token maybe misconfigured; could not find username");
                         return;
                     }
+                    if (blockListService.findByToken(jwt) != null) {
+                        handleError(response, "Token has been invalidated");
+                        return;
+                    }
                     UserDetails userDetails = fakeGetUser(username);
 
                     UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(username, userDetails.getPassword(), userDetails.getAuthorities());
@@ -67,8 +75,8 @@ public class JWTFilter extends OncePerRequestFilter {
             }
         }
         else {
-            if (!request.getRequestURI().equals("/token")) {
-                // endpoint "/token" is where you get a JWT so none needed; for some reason this filter applies there too
+            // use if statement to ignore certain endpoints
+            if (!request.getRequestURI().equals("/token") && !request.getRequestURI().equals("/signup")) {
                 handleError(response, "Missing or misconfigured Bearer token");
                 return;
             }

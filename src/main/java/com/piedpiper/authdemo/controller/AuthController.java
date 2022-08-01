@@ -1,20 +1,28 @@
 package com.piedpiper.authdemo.controller;
 
-import com.piedpiper.authdemo.JWTResponseDAO;
+import com.piedpiper.authdemo.JWTBlockList;
+import com.piedpiper.authdemo.JWTBlockListService;
+import com.piedpiper.authdemo.JWTResponseDTO;
 import com.piedpiper.authdemo.configuration.JWTUtil;
 import com.piedpiper.authdemo.user.AppUser;
+import com.piedpiper.authdemo.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 public class AuthController {
@@ -26,28 +34,59 @@ public class AuthController {
     PasswordEncoder passwordEncoder;
 
     @Autowired
-    UserDetailsService userDetailsService;
+    UserService userDetailsService;
 
+    @Autowired
+    JWTBlockListService blockListService;
+
+    @PostMapping("/signup")
+    public ResponseEntity<Map<String, String>> register(@RequestBody AppUser appUser) {
+        Map<String, String> result = new HashMap<>();
+        HttpStatus status = HttpStatus.BAD_REQUEST; // bad request by default
+        try {
+            appUser.setPassword(passwordEncoder.encode(appUser.getPassword())); // store the hash of the password
+            AppUser newUser = userDetailsService.save(appUser);
+            result.put("Username", newUser.getUsername());
+            status = HttpStatus.OK;
+        }
+        catch (BadCredentialsException err) {
+            result.put("Error", err.getMessage());
+        }
+        finally {
+            return new ResponseEntity<>(result, status);
+        }
+    }
 
     @PostMapping("/token")
-    public ResponseEntity<JWTResponseDAO> token(@RequestBody AppUser appUser) {
+    public ResponseEntity<JWTResponseDTO> token(@RequestBody AppUser appUser) {
         try {
             UserDetails user = userDetailsService.loadUserByUsername(appUser.getUsername());
             if (!passwordEncoder.matches(appUser.getPassword(), user.getPassword())) {
                 throw new BadCredentialsException("Invalid username or password");
             }
             String token = jwtUtil.generateToken(appUser.getUsername());
-            JWTResponseDAO response = new JWTResponseDAO(null, token);
+            JWTResponseDTO response = new JWTResponseDTO(null, token);
             return ResponseEntity.ok().body(response);
         }
         catch(UsernameNotFoundException err) {
-            JWTResponseDAO response = new JWTResponseDAO("Invalid username or password", null);
+            JWTResponseDTO response = new JWTResponseDTO("Invalid username or password", null);
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
         catch (AuthenticationException err) {
             //System.out.println(err.getClass() + ": " + err.getMessage());
-            JWTResponseDAO response = new JWTResponseDAO(err.getMessage(), null);
+            JWTResponseDTO response = new JWTResponseDTO(err.getMessage(), null);
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(@RequestHeader("Authorization") String token) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        //String sessionID = RequestContextHolder.getRequestAttributes().getSessionId();
+        String jwt = token.split(" ")[1];
+        blockListService.save(new JWTBlockList(jwt));
+        auth.setAuthenticated(false);
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.ok().body("");
     }
 }

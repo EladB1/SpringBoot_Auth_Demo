@@ -1,5 +1,7 @@
 package com.piedpiper.authdemo.user;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -7,24 +9,35 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserService implements UserDetailsService {
 
-    private List<AppUser> appUsers = new ArrayList<>();
+    private UserRepository userRepository;
 
-
-    public UserService() {
-        appUsers.add(new AppUser("jimmy.neutron", "secret"));
+    @Autowired
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
+
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        for (AppUser appUser : appUsers) {
-            if (appUser.getUsername().equals(username))
-                return new User(appUser.getUsername(), appUser.getPassword(), new ArrayList<>());
+        Optional<AppUser> appUser =  userRepository.findById(username);
+        if (appUser.isEmpty())
+            throw new UsernameNotFoundException("Could not find user with username " + username);
+        else {
+            AppUser user = appUser.get();
+            return new User(user.getUsername(), user.getPassword(), new ArrayList<>());
         }
-        return new User(null, null, null); //throw new UsernameNotFoundException("Could not find user with username " + username);
+    }
+
+    public AppUser save(AppUser user) throws BadCredentialsException {
+        String username = user.getUsername();
+        Optional<AppUser> appUser = userRepository.findById(username);
+        if (!appUser.isEmpty())
+            throw new BadCredentialsException("Username '" + username + "' already exists");
+        return userRepository.save(user);
     }
 }

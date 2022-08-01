@@ -4,13 +4,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 @JsonInclude(Include.NON_NULL)
-public class JWTResponseDAO {
+public class JWTResponseDTO {
     private String error;
     private String token;
 
-    public JWTResponseDAO() {}
+    public JWTResponseDTO() {}
 
-    public JWTResponseDAO(String error, String token) {
+    public JWTResponseDTO(String error, String token) {
         this.error = error;
         this.token = token;
     }
