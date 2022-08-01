@@ -1,15 +1,14 @@
-package com.piedpiper.authdemo.configuration;
+package com.piedpiper.authdemo.JWT;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.piedpiper.authdemo.JWTBlockListService;
-import com.piedpiper.authdemo.JWTResponseDTO;
 
+import com.piedpiper.authdemo.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -21,16 +20,18 @@ import java.io.IOException;
 
 @Component
 public class JWTFilter extends OncePerRequestFilter {
-    @Autowired
-    private JWTUtil jwtUtil;
 
-    @Autowired
+    private JWTUtil jwtUtil;
+    private UserService userService;
     private JWTBlockListService blockListService;
 
-    public UserDetails fakeGetUser(String username) {
-        UserDetails user = User.withUsername(username).password("secret").authorities("ADMIN").build();
-        return user;
+    @Autowired
+    public JWTFilter(JWTUtil jwtUtil, JWTBlockListService blockListService, UserService userService) {
+        this.jwtUtil = jwtUtil;
+        this.blockListService = blockListService;
+        this.userService = userService;
     }
+
 
     private void handleError(HttpServletResponse response, String message) throws IOException {
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -46,7 +47,7 @@ public class JWTFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && !header.isEmpty() && header.startsWith("Bearer ")) {
             String jwt = header.split(" ")[1].trim();
-            if ( jwt == null || jwt.isEmpty()) {
+            if (jwt.isEmpty()) {
                 handleError(response, "Invalid JWT in Bearer Header");
                 return;
             }
@@ -61,14 +62,14 @@ public class JWTFilter extends OncePerRequestFilter {
                         handleError(response, "Token has been invalidated");
                         return;
                     }
-                    UserDetails userDetails = fakeGetUser(username);
+                    UserDetails userDetails = userService.loadUserByUsername(username);
 
                     UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(username, userDetails.getPassword(), userDetails.getAuthorities());
                     if (SecurityContextHolder.getContext().getAuthentication() == null) {
                         SecurityContextHolder.getContext().setAuthentication(token);
                     }
                 }
-                catch(JWTVerificationException err) {
+                catch(JWTVerificationException | UsernameNotFoundException err) {
                     handleError(response, err.getMessage());
                     return;
                 }

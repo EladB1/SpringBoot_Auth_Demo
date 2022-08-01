@@ -29,7 +29,8 @@ public class UserService implements UserDetailsService {
             throw new UsernameNotFoundException("Could not find user with username " + username);
         else {
             AppUser user = appUser.get();
-            return new User(user.getUsername(), user.getPassword(), new ArrayList<>());
+            //return new User(user.getUsername(), user.getPassword(), new ArrayList<>());
+            return User.withUsername(user.getUsername()).password(user.getPassword()).authorities("USER").build();
         }
     }
 

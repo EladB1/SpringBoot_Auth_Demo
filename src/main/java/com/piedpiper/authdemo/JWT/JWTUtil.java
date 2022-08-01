@@ -1,4 +1,4 @@
-package com.piedpiper.authdemo.configuration;
+package com.piedpiper.authdemo.JWT;
 
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;

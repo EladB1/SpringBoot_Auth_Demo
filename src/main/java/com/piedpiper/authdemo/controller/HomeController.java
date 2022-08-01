@@ -16,10 +16,15 @@ import java.util.Map;
 @Controller
 public class HomeController {
 
-    @Autowired
-    UserService userService;
 
-    private Map<String, LocalDateTime> usersLastAccess = new HashMap<>();
+    private UserService userService;
+    private Map<String, LocalDateTime> usersLastAccess;
+
+    @Autowired
+    public HomeController(UserService userService) {
+        this.userService = userService;
+        this.usersLastAccess = new HashMap<>();
+    }
 
     @GetMapping("/")
     public String getCurrentUser(@AuthenticationPrincipal(expression = "@userService.loadUserByUsername(#this)") User user, Model model) {

@@ -1,5 +1,6 @@
 package com.piedpiper.authdemo.configuration;
 
+import com.piedpiper.authdemo.JWT.JWTFilter;
 import com.piedpiper.authdemo.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -25,14 +26,15 @@ public class SecurityConfiguration {
         return encoder;
     }
 
-    @Autowired
-    UserService userService;
+    private UserService userService;
+
+    private JWTFilter filter;
 
     @Autowired
-    JWTFilter filter;
-
-    public SecurityConfiguration(UserService userService) {
+    public SecurityConfiguration(UserService userService, JWTFilter filter) {
         this.encoder = new BCryptPasswordEncoder();
+        this.userService = userService;
+        this.filter = filter;
     }
 
 
@@ -51,7 +53,8 @@ public class SecurityConfiguration {
             .and()
             .authorizeRequests().antMatchers("/signup**").permitAll()
             .and()
-            .authorizeRequests().anyRequest().authenticated().and()
+            .authorizeRequests().anyRequest().authenticated()
+            .and()
             .csrf().disable()
             .formLogin().disable()
             .httpBasic().disable()

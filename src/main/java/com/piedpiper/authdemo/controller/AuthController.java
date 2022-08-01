@@ -1,9 +1,9 @@
 package com.piedpiper.authdemo.controller;
 
-import com.piedpiper.authdemo.JWTBlockList;
-import com.piedpiper.authdemo.JWTBlockListService;
-import com.piedpiper.authdemo.JWTResponseDTO;
-import com.piedpiper.authdemo.configuration.JWTUtil;
+import com.piedpiper.authdemo.JWT.JWTBlockList;
+import com.piedpiper.authdemo.JWT.JWTBlockListService;
+import com.piedpiper.authdemo.JWT.JWTResponseDTO;
+import com.piedpiper.authdemo.JWT.JWTUtil;
 import com.piedpiper.authdemo.user.AppUser;
 import com.piedpiper.authdemo.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,17 +27,18 @@ import java.util.Map;
 @RestController
 public class AuthController {
 
-    @Autowired
     JWTUtil jwtUtil;
-
-    @Autowired
     PasswordEncoder passwordEncoder;
-
-    @Autowired
     UserService userDetailsService;
+    JWTBlockListService blockListService;
 
     @Autowired
-    JWTBlockListService blockListService;
+    public AuthController(JWTUtil jwtUtil, PasswordEncoder passwordEncoder, UserService userDetailsService, JWTBlockListService blockListService) {
+        this.jwtUtil = jwtUtil;
+        this.passwordEncoder = passwordEncoder;
+        this.userDetailsService = userDetailsService;
+        this.blockListService = blockListService;
+    }
 
     @PostMapping("/signup")
     public ResponseEntity<Map<String, String>> register(@RequestBody AppUser appUser) {
@@ -48,11 +49,10 @@ public class AuthController {
             AppUser newUser = userDetailsService.save(appUser);
             result.put("Username", newUser.getUsername());
             status = HttpStatus.OK;
+            return new ResponseEntity<>(result, status);
         }
         catch (BadCredentialsException err) {
             result.put("Error", err.getMessage());
-        }
-        finally {
             return new ResponseEntity<>(result, status);
         }
     }

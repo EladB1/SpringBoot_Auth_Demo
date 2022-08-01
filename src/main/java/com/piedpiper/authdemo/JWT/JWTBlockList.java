@@ -1,4 +1,4 @@
-package com.piedpiper.authdemo;
+package com.piedpiper.authdemo.JWT;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;

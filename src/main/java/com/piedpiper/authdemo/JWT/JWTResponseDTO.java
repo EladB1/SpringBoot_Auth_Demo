@@ -1,4 +1,4 @@
-package com.piedpiper.authdemo;
+package com.piedpiper.authdemo.JWT;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
