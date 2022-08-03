@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,7 +44,7 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<Map<String, String>> register(@RequestBody AppUser appUser) {
+    public ResponseEntity<Map<String, String>> register(@Valid @RequestBody AppUser appUser) {
         Map<String, String> result = new HashMap<>();
         HttpStatus status = HttpStatus.BAD_REQUEST; // bad request by default
         try {
