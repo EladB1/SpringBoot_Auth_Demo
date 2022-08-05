@@ -20,6 +20,9 @@ public class JWTUtil {
     @Value("${jwt.secret}")
     private String secret;
 
+    @Value("${jwt.maxage.seconds}")
+    private int maxAge;
+
     public String generateToken(String username) throws IllegalArgumentException, JWTCreationException {
         Instant now = Instant.now();
         Algorithm algo = Algorithm.HMAC256(secret);
@@ -27,7 +30,7 @@ public class JWTUtil {
                 .withSubject("User Details")
                 .withClaim("username", username)
                 .withIssuedAt(now)
-                .withExpiresAt(now.plusSeconds(1800))
+                .withExpiresAt(now.plusSeconds(maxAge))
                 .withIssuer("com.piedpiper.authdemo")
                 .sign(algo);
     }
