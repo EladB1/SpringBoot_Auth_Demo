@@ -14,9 +14,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
 
 @Component
 public class JWTFilter extends OncePerRequestFilter {
@@ -42,11 +44,62 @@ public class JWTFilter extends OncePerRequestFilter {
         response.getOutputStream().print(output);
     }
 
+    protected Cookie getJWTCookie(Cookie[] cookies) {
+        if (cookies == null)
+            return null;
+        for (Cookie cookie : cookies) {
+            if (cookie.getName().equals("Token"))
+                return cookie;
+        }
+        return null;
+    }
+
+    @Override
+    public void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
+        List<String> unauthenticatedEndpoints = List.of("/token", "/signup");
+        if (!unauthenticatedEndpoints.contains(request.getRequestURI())) {
+                String jwt = "";
+            Cookie jwtCookie = getJWTCookie(request.getCookies());
+            if (jwtCookie == null) {
+                handleError(response, "Missing Token cookie in request");
+                return;
+            }
+            jwt = jwtCookie.getValue();
+            try {
+                String username = jwtUtil.validateTokenAndGetSubject(jwt);
+                if (username == null || username.isEmpty()) {
+                    handleError(response, "Token maybe misconfigured; could not find username");
+                    return;
+                }
+                if (blockListService.findByToken(jwt) != null) {
+                    handleError(response, "Token has been invalidated");
+                    return;
+                }
+                UserDetails userDetails = userService.loadUserByUsername(username);
+
+                UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(username, userDetails.getPassword(), userDetails.getAuthorities());
+                if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                    SecurityContextHolder.getContext().setAuthentication(token);
+                }
+            }
+            catch (JWTVerificationException | UsernameNotFoundException err) {
+                handleError(response, err.getMessage());
+                return;
+            }
+        }
+        chain.doFilter(request, response);
+    }
+    /*
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
         String header = request.getHeader("Authorization");
-        if (header != null && !header.isEmpty() && header.startsWith("Bearer ")) {
-            String jwt = header.split(" ")[1].trim();
+        String jwt = "";
+        Cookie jwtCookie = getJWTCookie(request.getCookies());
+        if ((header != null && !header.isEmpty() && header.startsWith("Bearer ")) || jwtCookie != null) {
+            if (jwtCookie != null)
+                jwtCookie.getValue();
+            else
+                jwt = header.split(" ")[1].trim();
             if (jwt.isEmpty()) {
                 handleError(response, "Invalid JWT in Bearer Header");
                 return;
@@ -84,4 +137,5 @@ public class JWTFilter extends OncePerRequestFilter {
         }
         chain.doFilter(request, response);
     }
+    */
 }
