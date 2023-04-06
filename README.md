@@ -24,7 +24,7 @@ A simple REST API that uses JWT Authentication
   - an invalid user will return a response code of `400` and payload that looks like
   ```json
       {
-        "Error: "some_error_with_account_creation_attempt"
+        "Error": "some_error_with_account_creation_attempt"
       }
   ```
 2. Users will attempt to sign in at the `/token` endpoint
